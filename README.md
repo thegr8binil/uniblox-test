@@ -1,37 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Mapping Copilot
 
-## Getting Started
+**AI Mapping Copilot** is a high-performance, AI-driven web application designed to streamline insurance data operations. It automates the complex task of mapping disparate spreadsheet column headers to a standardized canonical schema, ensuring data integrity and operational speed.
 
-First, run the development server:
+## 🚀 Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+-   **Intelligent Auto-Mapping**: Leverages Google Gemini 2.0 Flash to perform semantic similarity analysis on spreadsheet headers.
+-   **Local File Ingestion**: Robust drag-and-drop support for `.csv` and `.xlsx` files with client-side parsing.
+-   **Operator Summary Dashboard**: High-level metrics for total columns, successful mappings, unmapped fields, and schema conflicts.
+-   **Human-in-the-Loop Review**: An interactive mapping table allowing operators to verify, override, or ignore AI suggestions.
+-   **One-Click Export**: Finalized mapping configurations can be exported directly as a timestamped JSON file.
+-   **Clean & Minimal Design**: Built using Shadcn UI and Inter typography for a focused, "built-for-work" experience.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Technology Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+-   **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS.
+-   **UI Components**: Shadcn UI (Radix UI), Lucide Icons.
+-   **AI Engine**: Google Generative AI (Gemini 2.0 Flash).
+-   **File Parsing**: PapaParse (CSV), XLSX.js (Excel).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📥 Getting Started
 
-## Learn More
+### Prerequisites
 
-To learn more about Next.js, take a look at the following resources:
+-   Node.js (v20+)
+-   A Google Gemini API Key
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Installation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/thegr8binil/uniblox-test.git
+    cd uniblox-test
+    ```
 
-## Deploy on Vercel
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3.  **Environment Configuration**:
+    Create a `.env.local` file in the root directory and add your API key:
+    ```env
+    GOOGLE_GENERATIVE_AI_API_KEY=your_actual_api_key_here
+    ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# uniblox-test
+4.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
+
+## 📖 How It Works
+
+1.  **Upload**: Drag and drop an insurance spreadsheet into the ingestion zone.
+2.  **Extraction**: The system extracts the header row locally without uploading your private data to a server.
+3.  **AI Mapping**: The headers are sent to the AI Mapping API, which compares them against the canonical insurance schema:
+    - `employee_id`, `first_name`, `last_name`, `date_of_birth`, `state`, `zip`, `annual_salary`, `hire_date`, `employment_status`, `coverage_amount`, `smoker`, `dependent_count`.
+4.  **Verification**: Operators review the suggested mappings. Rows with low confidence (<50%) or null mappings are highlighted for attention.
+5.  **Export**: Once reviewed, click **Approve & Export JSON** to download the finalized mapping configuration.
+
+---
+Built with ⚡ by the UNIBLOX team.
