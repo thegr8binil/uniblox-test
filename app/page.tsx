@@ -1,173 +1,184 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import UploadZone from "@/components/UploadZone";
 import MappingTable from "@/components/MappingTable";
 import ExplanationPanel from "@/components/ExplanationPanel";
 import ApproveBar from "@/components/ApproveBar";
-import { parseFile, ParsedData } from "@/lib/parseSheet";
-import { CanonicalColumn } from "@/lib/schema";
+import { canonicalSchema } from "@/lib/schema";
+import { AlertCircle, Loader2 } from "lucide-react";
+
+export interface MappingItem {
+  input_column: string;
+  mapped_to: string | null;
+  confidence: number;
+  reasoning: string;
+}
 
 export default function Home() {
-  const [data, setData] = useState<ParsedData | null>(null);
-  const [mappings, setMappings] = useState<Record<string, any>>({});
-  const [isMapping, setIsMapping] = useState(false);
-  const [selectedCol, setSelectedCol] = useState<string | null>(null);
-  const [isApprovable, setIsApprovable] = useState(false);
-  const [bootSequence, setBootSequence] = useState(false);
+  const [detectedColumns, setDetectedColumns] = useState<string[] | null>(null);
+  const [mappings, setMappings] = useState<MappingItem[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
 
-  useEffect(() => {
-    setBootSequence(true);
-  }, []);
+  // Derive metrics for Summary Dashboard
+  const metrics = useMemo(() => {
+    if (!mappings) return { total: 0, mapped: 0, conflicts: 0, unmapped: 0 };
+    
+    const mappedItems = mappings.filter(m => m.mapped_to !== null);
+    const unmappedItems = mappings.filter(m => m.mapped_to === null);
+    
+    // Detect conflicts (2+ columns mapping to same canonical field)
+    const counts: Record<string, number> = {};
+    mappedItems.forEach(m => {
+      if (m.mapped_to) counts[m.mapped_to] = (counts[m.mapped_to] || 0) + 1;
+    });
+    const conflicts = Object.values(counts).filter(count => count > 1).length;
 
-  const handleFileUpload = async (file: File) => {
+    return {
+      total: mappings.length,
+      mapped: mappedItems.length,
+      conflicts,
+      unmapped: unmappedItems.length
+    };
+  }, [mappings]);
+
+  const handleColumnsDetected = async (columns: string[], sampleData: any[]) => {
+    setDetectedColumns(columns);
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setIsMapping(true);
-      const parsed = await parseFile(file);
-      setData(parsed);
-
-      // Trigger AI Mapping
       const response = await fetch("/api/map-columns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceColumns: parsed.columns,
-          sampleData: parsed.rows.slice(0, 3),
-        }),
+        body: JSON.stringify({ columns }),
       });
 
-      if (response.ok) {
-        const aiMappings = await response.json();
-        setMappings(aiMappings);
-        setIsApprovable(true);
-      }
-    } catch (error) {
-      console.error("Critical System Error:", error);
-      alert("CRITICAL ERROR: DATA STREAM REJECTED");
+      if (!response.ok) throw new Error("AI service unavailable");
+
+      const aiMappings: MappingItem[] = await response.json();
+      setMappings(aiMappings);
+    } catch (err: any) {
+      console.error("Mapping error:", err);
+      setError("AI mapping failed. You can map columns manually.");
+      
+      // Still render table with null mappings
+      const manualMappings: MappingItem[] = columns.map(col => ({
+        input_column: col,
+        mapped_to: null,
+        confidence: 0,
+        reasoning: "Initialization failed — please map manually."
+      }));
+      setMappings(manualMappings);
     } finally {
-      setIsMapping(false);
+      setIsLoading(false);
     }
   };
 
-  const handleMappingChange = (source: string, target: CanonicalColumn | null) => {
-    setMappings((prev) => ({
-      ...prev,
-      [source]: {
-        ...prev[source],
-        target,
-        confidence: 1.0,
-        explanation: "MANUAL OVERRIDE DETECTED / USER DEFINED ALLOCATION.",
-      },
-    }));
+  const handleExport = () => {
+    if (!mappings) return;
+    const blob = new Blob([JSON.stringify(mappings, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `insurance-mapping-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const resetAll = () => {
-    setData(null);
-    setMappings({});
-    setIsApprovable(false);
+    setDetectedColumns(null);
+    setMappings(null);
+    setError(null);
+    setShowSummary(false);
   };
 
   return (
-    <main className="min-h-screen relative overflow-hidden font-mono selection:bg-yellow-400 selection:text-black">
-      {/* Structural Grid lines */}
-      <div className="fixed inset-0 pointer-events-none border-[20px] border-zinc-900/50 z-40 m-4 border-double" />
-      
-      <div className="max-w-[1600px] mx-auto px-12 py-20 relative z-10">
-        <header className="mb-24 flex flex-col md:flex-row md:items-end justify-between gap-12 border-b-4 border-zinc-900 pb-12">
-          <div className="space-y-6 max-w-3xl">
-            <div className={`inline-flex items-center gap-3 px-4 py-1 bg-yellow-400 text-black text-[10px] font-black tracking-[0.4em] uppercase transition-all duration-1000 ${bootSequence ? "translate-x-0 opacity-100" : "-translate-x-12 opacity-0"}`}>
-              <span className="w-2 h-2 bg-black animate-pulse" />
-              SYSTEM_LIVE // CO-PILOT_STATION_B
-            </div>
-            <h1 className="font-sans text-8xl font-black tracking-tighter uppercase leading-[0.8]">
-              AI_MAPPING<br />
-              <span className="text-yellow-400">INFRASTRUCTURE</span>
-            </h1>
-            <p className="text-zinc-600 text-sm font-bold max-w-xl leading-relaxed uppercase tracking-widest">
-              Automated high-fidelity data allocation protocol. Analyzing semantic structures of disparate registries via Gemini-1.5 kernels. 
-              <span className="text-zinc-400 block mt-4">{" >> INITIATE DATA FEED TO BEGIN SCAN."}</span>
-            </p>
+    <main className="min-h-screen bg-background text-foreground selection:bg-indigo-500/30">
+      <div className="max-w-5xl mx-auto px-6 py-20 pb-40">
+        {/* Header */}
+        <header className="mb-20 space-y-4">
+          <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest bg-secondary text-secondary-foreground">
+            Insurance Operations
           </div>
-          
-          <div className="hidden lg:block space-y-2 text-right">
-            <div className="text-[10px] font-black text-zinc-800 uppercase tracking-[0.5em]">Terminal_Stats</div>
-            <div className="text-xs text-zinc-500 font-bold">LATENCY: 12ms</div>
-            <div className="text-xs text-zinc-500 font-bold">KERNEL: v4.19.0-MAP</div>
-            <div className="flex justify-end gap-1 mt-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="w-4 h-4 bg-zinc-900 border border-zinc-800" />
-              ))}
-            </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-semibold tracking-tight">
+              AI Mapping Copilot
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-xl font-normal leading-relaxed">
+              Upload spreadsheets to map column headers to the canonical insurance schema with AI oversight.
+            </p>
           </div>
         </header>
 
-        <div className="relative">
-          {!data ? (
-            <div className="max-w-4xl animate-in fade-in slide-in-from-left duration-700">
-              <UploadZone onFileUpload={handleFileUpload} isProcessing={isMapping} />
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-8 p-4 rounded-xl bg-rose-50 border border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/50 flex items-center gap-3 text-rose-800 dark:text-rose-400 animate-in fade-in slide-in-from-top-4 duration-500">
+            <AlertCircle size={20} className="shrink-0" />
+            <p className="text-sm font-semibold">{error}</p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-32 space-y-6 animate-in fade-in duration-700">
+            <div className="relative">
+              <Loader2 size={48} className="animate-spin text-primary opacity-20" />
+              <Loader2 size={48} className="animate-spin text-indigo-600 absolute inset-0 [animation-delay:-0.3s]" />
             </div>
-          ) : (
-            <div className="grid grid-cols-12 gap-12 animate-in fade-in zoom-in-95 duration-500">
-              <div className="col-span-12 xl:col-span-9 space-y-8">
-                <div className="flex items-center justify-between border-l-8 border-yellow-400 pl-6 py-2 bg-zinc-900/40">
-                  <h2 className="text-xl font-black tracking-widest uppercase">Registry_Review_Buffer</h2>
-                  <div className="flex items-center gap-4 px-4 font-black">
-                    <span className="text-zinc-700 text-[10px]">TOTAL_STREAMS:</span>
-                    <span className="text-yellow-400 text-sm">{data.columns.length}</span>
-                  </div>
-                </div>
+            <div className="space-y-1 text-center">
+              <p className="text-lg font-medium">AI is analyzing your columns...</p>
+              <p className="text-sm text-muted-foreground">Performing semantic similarity analysis on your headers.</p>
+            </div>
+          </div>
+        )}
 
-                <MappingTable
-                  sourceColumns={data.columns}
-                  mappings={mappings}
-                  onMappingChange={handleMappingChange}
-                  onShowExplanation={setSelectedCol}
-                />
-              </div>
+        {/* Content Area */}
+        <div className="relative">
+          {!detectedColumns && !isLoading && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <UploadZone onColumnsDetected={handleColumnsDetected} />
+            </div>
+          )}
 
-              <div className="hidden xl:block xl:col-span-3 space-y-6">
-                <div className="p-8 border-2 border-zinc-900 bg-zinc-900/20 clip-corners">
-                  <h3 className="text-[10px] font-black text-zinc-600 mb-6 uppercase tracking-[0.3em]">Operational_Intel</h3>
-                  <ul className="space-y-6 text-[10px] font-bold text-zinc-400">
-                    <li className="flex gap-4">
-                      <span className="text-yellow-400">{" >> "}</span>
-                      USE SIDE DIAGNOSTICS FOR FIELD RATIONALE.
-                    </li>
-                    <li className="flex gap-4">
-                      <span className="text-yellow-400">{" >> "}</span>
-                      MANUAL ASSIGNMENTS OVERRIDE KERNEL PREDICTIONS.
-                    </li>
-                    <li className="flex gap-4 opacity-30">
-                      <span className="text-zinc-700">{" >> "}</span>
-                      EXPERIMENTAL: JSON_EXPORT_ENABLED.
-                    </li>
-                  </ul>
+          {mappings && !isLoading && (
+            <div className="space-y-10 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between border-b pb-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-bold tracking-tight">Review Results</h2>
+                  <p className="text-muted-foreground text-sm">Operator review of canonical insurance mappings.</p>
                 </div>
               </div>
+
+              <MappingTable
+                mappings={mappings}
+                canonicalSchema={[...canonicalSchema]}
+                onChange={setMappings}
+                onShowExplanation={() => setShowSummary(true)}
+              />
             </div>
           )}
         </div>
       </div>
 
-      {/* Sidebars and Overlay Components */}
       <ExplanationPanel
-        sourceColumn={selectedCol}
-        mapping={selectedCol ? mappings[selectedCol] : null}
-        onClose={() => setSelectedCol(null)}
+        isOpen={showSummary}
+        onClose={() => setShowSummary(false)}
+        metrics={metrics}
       />
 
-      {isApprovable && (
+      {mappings && !isLoading && (
         <ApproveBar
-          onApprove={() => alert("COMMITTED: DATA PACKETS SENT TO MAIN REGISTRY")}
+          onApprove={handleExport}
           onReset={resetAll}
+          onShowSummary={() => setShowSummary(true)}
           isProcessing={false}
         />
       )}
-
-      {/* Persistent UI Elements */}
-      <div className="fixed bottom-32 left-8 -rotate-90 origin-left text-[10px] font-black text-zinc-800 tracking-[1em] uppercase z-0">
-        UNIBLOX_SECURE_KERNEL
-      </div>
     </main>
   );
 }

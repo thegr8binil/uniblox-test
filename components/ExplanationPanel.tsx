@@ -1,77 +1,93 @@
 import React from "react";
-import { CanonicalColumn } from "@/lib/schema";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { CheckCircle2, AlertTriangle, HelpCircle, LayoutGrid } from "lucide-react";
 
-interface Mapping {
-  target: CanonicalColumn | null;
-  confidence: number;
-  explanation: string;
-}
-
-interface ExplanationPanelProps {
-  sourceColumn: string | null;
-  mapping: Mapping | null;
+interface SummaryDashboardProps {
+  isOpen: boolean;
   onClose: () => void;
+  metrics: {
+    total: number;
+    mapped: number;
+    conflicts: number;
+    unmapped: number;
+  };
 }
 
-const ExplanationPanel: React.FC<ExplanationPanelProps> = ({ sourceColumn, mapping, onClose }) => {
-  if (!sourceColumn) return null;
-
+const ExplanationPanel: React.FC<SummaryDashboardProps> = ({ isOpen, onClose, metrics }) => {
   return (
-    <div className="fixed inset-y-0 right-0 w-[450px] bg-black border-l-4 border-zinc-800 shadow-[20px_0_60px_rgba(0,0,0,1)] p-0 z-[100] animate-in slide-in-from-right duration-500 overflow-hidden">
-      {/* Panel Header */}
-      <div className="bg-zinc-900 border-b-2 border-zinc-800 px-8 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-3 h-3 bg-yellow-400 rounded-none animate-pulse" />
-          <h2 className="text-sm font-black text-white tracking-[0.4em] uppercase font-mono">AI_DIAGNOSTICS_v1.2</h2>
-        </div>
-        <button 
-          onClick={onClose} 
-          className="text-zinc-600 hover:text-white transition-colors p-2 border border-transparent hover:border-zinc-700"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-      </div>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-[400px] sm:w-[480px]">
+        <SheetHeader className="pb-6 border-b">
+          <SheetTitle className="text-xl font-semibold">Mapping Summary</SheetTitle>
+        </SheetHeader>
 
-      <div className="p-10 font-mono space-y-12">
-        <section className="space-y-4">
-          <label className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] block">INPUT_PARAMETER</label>
-          <div className="p-4 bg-zinc-900 border-2 border-zinc-800 text-yellow-400 font-black text-lg skew-x-[-12deg]">
-            <span className="skew-x-[12deg] inline-block">{sourceColumn}</span>
-          </div>
-        </section>
+        <div className="py-8 space-y-8">
+          <p className="text-sm text-muted-foreground leading-relaxed font-normal">
+            Review the current state of your column mappings. High conflict counts may require manual review before export.
+          </p>
 
-        <section className="space-y-4">
-          <label className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] block">PREDICTED_ALLOCATION</label>
-          <div className="p-4 bg-emerald-500/10 border-2 border-emerald-900/30 text-emerald-400 font-black text-lg">
-            {mapping?.target ? mapping.target.toUpperCase().replace(/_/g, " ") : "[ UNASSIGNED ]"}
-          </div>
-        </section>
-
-        <section className="space-y-4 relative">
-          <label className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] block">RATIONALE_DUMP</label>
-          <div className="p-6 bg-zinc-900/50 border-l-4 border-zinc-700 text-zinc-400 text-xs leading-loose font-bold whitespace-pre-wrap">
-            {mapping?.explanation ? `> ANALYSIS INITIATED...\n> SCANNING SEMANTIC PATTERNS...\n\n"${mapping.explanation.toUpperCase()}"\n\n> END OF DATA STREAM.` : "> NO DATA AVAILABLE."}
-          </div>
-          {/* Decorative corner */}
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-zinc-800" />
-        </section>
-
-        <div className="pt-10 border-t border-zinc-900">
-          <div className="flex flex-col gap-2 p-4 bg-black border-2 border-zinc-900 text-[10px] font-black text-zinc-700 uppercase tracking-[0.2em] relative overflow-hidden">
-            <div className="relative z-10 flex items-center gap-3">
-              <span className="text-yellow-600 text-lg">!</span>
-              WARNING: MANUAL OVERRIDE RECOMMENDED FOR CRITICAL SYSTEMS
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border bg-muted/30 space-y-2">
+              <LayoutGrid size={18} className="text-zinc-500" />
+              <div>
+                <p className="text-2xl font-bold tracking-tight">{metrics.total}</p>
+                <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Columns</p>
+              </div>
             </div>
-            <div className="absolute inset-0 bg-yellow-400/5 scanline-active opacity-20" />
+
+            <div className="p-4 rounded-xl border bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/50 space-y-2">
+              <CheckCircle2 size={18} className="text-emerald-500" />
+              <div>
+                <p className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">{metrics.mapped}</p>
+                <p className="text-[10px] uppercase font-bold text-emerald-600/70 tracking-wider">Mapped</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border bg-rose-50/50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/50 space-y-2">
+              <AlertTriangle size={18} className="text-rose-500" />
+              <div>
+                <p className="text-2xl font-bold tracking-tight text-rose-700 dark:text-rose-400">{metrics.conflicts}</p>
+                <p className="text-[10px] uppercase font-bold text-rose-600/70 tracking-wider">Conflicts</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border bg-amber-50/50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/50 space-y-2">
+              <HelpCircle size={18} className="text-amber-500" />
+              <div>
+                <p className="text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-400">{metrics.unmapped}</p>
+                <p className="text-[10px] uppercase font-bold text-amber-600/70 tracking-wider">Unmapped</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Quick Tips</h3>
+            <ul className="space-y-3 text-xs text-muted-foreground font-normal leading-relaxed">
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-primary">•</span>
+                <span>Columns mapped to <strong>null</strong> will be excluded from the final insurance ingestion.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-primary">•</span>
+                <span>Conflicts occur when multiple input headers are mapped to the same canonical field (e.g. "Salary" and "Base Pay").</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-primary">•</span>
+                <span>You can manually override any AI suggestion by clicking the dropdown in the review table.</span>
+              </li>
+            </ul>
           </div>
         </div>
-      </div>
-
-      {/* Side Metadata */}
-      <div className="absolute bottom-10 left-[-60px] rotate-[-90deg] text-[10px] font-black text-zinc-800 tracking-[1em] uppercase">
-        MODEL: GEMINI_1.5_PRO_FLASH
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 

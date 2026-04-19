@@ -60,3 +60,12 @@
 
 ---
 Built with ⚡ by the UNIBLOX team.
+
+## 📊 Testing with Sample Data
+
+For your convenience, a sample dataset `employee_data.csv` is included in the root directory. You can use this file to test the AI Mapping Copilot:
+
+1.  Click the **Upload Zone** on the home page.
+2.  Select `employee_data.csv`.
+3.  Observe how the AI automatically maps columns like `salary` to `annual_salary`, `gender` to `gender` (if in schema), etc.
+4.  Review the **Mapping Summary** in the slide-out panel to see the AI's confidence and rationale.

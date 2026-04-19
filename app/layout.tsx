@@ -1,35 +1,27 @@
-import type { Metadata } from "next";
-import { Syne, JetBrains_Mono, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
-
-const syne = Syne({
-  variable: "--font-syne",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "AI Mapping Copilot | Industrial Terminal",
-  description: "Next-generation data mapping infrastructure.",
+export const metadata = {
+  title: "AI Mapping Copilot",
+  description: "Map your spreadsheet columns with AI",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className={cn(syne.variable, jetbrainsMono.variable, "font-sans", inter.variable)}>
-      <body className="bg-black text-white antialiased">
-        {children}
-      </body>
+    <html
+      lang="en"
+      className={`${inter.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }

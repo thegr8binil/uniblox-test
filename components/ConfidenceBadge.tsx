@@ -1,23 +1,30 @@
 import React from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface ConfidenceBadgeProps {
   confidence: number;
 }
 
 const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({ confidence }) => {
-  const getStyles = () => {
-    if (confidence >= 0.9) return "bg-zinc-900 text-emerald-500 border-emerald-900 border-l-[6px] border-l-emerald-500";
-    if (confidence >= 0.7) return "bg-zinc-900 text-yellow-500 border-yellow-900 border-l-[6px] border-l-yellow-500";
-    return "bg-zinc-900 text-rose-500 border-rose-900 border-l-[6px] border-l-rose-500";
+  const getColors = () => {
+    // Green (≥0.8)
+    if (confidence >= 0.8) {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
+    }
+    // Yellow (0.5–0.79)
+    if (confidence >= 0.5) {
+      return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
+    }
+    // Red (<0.5)
+    return "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20";
   };
 
   const percentage = Math.round(confidence * 100);
 
   return (
-    <div className={`inline-flex items-center px-4 py-1 font-mono text-[11px] font-black tracking-widest border transition-all hover:scale-105 ${getStyles()}`}>
-      <span className="opacity-50 mr-2">I_INDEX:</span>
+    <Badge variant="outline" className={`font-semibold text-[10px] tracking-tight ${getColors()}`}>
       {percentage}%
-    </div>
+    </Badge>
   );
 };
 
